@@ -5,7 +5,6 @@ import '../widgets/app_background.dart';
 import '../widgets/radar_scan.dart';
 import '../widgets/menu_card.dart';
 import '../widgets/staggered_entrance.dart';
-import '../widgets/code_chip.dart';
 import '../utils/app_route.dart';
 import '../services/app_preferences.dart';
 import '../services/auth_service.dart';

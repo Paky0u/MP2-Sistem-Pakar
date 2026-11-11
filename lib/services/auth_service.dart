@@ -76,3 +76,4 @@ class AuthService {
     await AppPreferences.logout();
   }
 }
+

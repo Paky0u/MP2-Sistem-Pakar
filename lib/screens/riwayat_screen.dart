@@ -54,6 +54,34 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
     }
   }
 
+  void _confirmDeleteItem(int id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Hapus Riwayat?',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: const Text(
+          'Apakah Anda yakin ingin menghapus data riwayat diagnosa ini?',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteItem(id);
+            },
+            child: const Text('Hapus', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _clearAll() async {
     final success = await ApiService.deleteRiwayat(); // Tanpa ID = hapus semua
     if (success) {
@@ -169,7 +197,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                           child: _RiwayatCard(
                             item: item,
                             showUserBadge: _currentUser?.isAdmin ?? false,
-                            onDelete: () => _deleteItem(item.id!),
+                            onDelete: () => _confirmDeleteItem(item.id!),
                           ),
                         );
                       },

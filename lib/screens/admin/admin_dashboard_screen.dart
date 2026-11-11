@@ -10,6 +10,8 @@ import '../login_screen.dart';
 import '../home_screen.dart';
 import '../riwayat_screen.dart';
 import '../kamus_screen.dart';
+import 'kelola_gejala_screen.dart';
+import 'kelola_kerusakan_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -208,13 +210,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                     // Menu Manajemen
                     const Text(
-                      'PENGELOLAAN SISTEM',
+                      'PENGELOLAAN SISTEM & BASIS PENGETAHUAN',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.bold,
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    _buildActionTile(
+                      icon: Icons.checklist,
+                      color: AppColors.primary,
+                      title: 'Kelola Data Gejala',
+                      subtitle: 'Tambah, perbarui, atau hapus data gejala kerusakan hardware.',
+                      onTap: () {
+                        Navigator.of(context).push(fadeSlideRoute(const KelolaGejalaScreen()));
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    _buildActionTile(
+                      icon: Icons.computer,
+                      color: AppColors.success,
+                      title: 'Kelola Data Kerusakan',
+                      subtitle: 'Tambah, edit, atau hapus data jenis kerusakan, solusi, dan deskripsi.',
+                      onTap: () {
+                        Navigator.of(context).push(fadeSlideRoute(const KelolaKerusakanScreen()));
+                      },
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
@@ -360,3 +384,4 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 }
+

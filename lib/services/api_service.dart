@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/riwayat.dart';
 import '../models/user_model.dart';
+import '../models/gejala.dart';
+import '../models/kerusakan.dart';
 
 class ApiService {
   // Dinamis: 'localhost' untuk Web (Chrome) & Windows, '10.0.2.2' untuk Android Emulator
@@ -43,7 +45,7 @@ class ApiService {
         }
       }
     } catch (e) {
-      print('DEBUG: Error Login: $e');
+      debugPrint('Error Login: $e');
       return {'success': false, 'message': 'Gagal terhubung ke server: $e'};
     }
     return {'success': false, 'message': 'Terjadi kesalahan sistem.'};
@@ -79,7 +81,7 @@ class ApiService {
         }
       }
     } catch (e) {
-      print('DEBUG: Error Register: $e');
+      debugPrint('Error Register: $e');
       return {'success': false, 'message': 'Gagal terhubung ke server: $e'};
     }
     return {'success': false, 'message': 'Terjadi kesalahan sistem.'};
@@ -118,7 +120,7 @@ class ApiService {
         }
       }
     } catch (e) {
-      print('DEBUG: Error Login Google: $e');
+      debugPrint('Error Login Google: $e');
       return {'success': false, 'message': 'Gagal terhubung ke server: $e'};
     }
     return {'success': false, 'message': 'Terjadi kesalahan sistem.'};
@@ -141,14 +143,13 @@ class ApiService {
         return data.map((json) => Riwayat.fromMap(json)).toList();
       }
     } catch (e) {
-      print('DEBUG: Error getRiwayatList: $e');
+      debugPrint('Error getRiwayatList: $e');
     }
     return [];
   }
 
   static Future<bool> simpanRiwayat(Riwayat riwayat) async {
     try {
-      print('DEBUG: Mengirim data riwayat...');
       final response = await http.post(
         Uri.parse('$baseUrl/simpan_riwayat.php'),
         headers: {'Content-Type': 'application/json'},
@@ -161,14 +162,12 @@ class ApiService {
           'persentase': riwayat.persentase,
         }),
       );
-      print('DEBUG: Response Status: ${response.statusCode}');
-      print('DEBUG: Response Body: ${response.body}');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['status'] == 'success';
       }
     } catch (e) {
-      print('DEBUG: Error Simpan Riwayat: $e');
+      debugPrint('Error Simpan Riwayat: $e');
     }
     return false;
   }
@@ -184,8 +183,192 @@ class ApiService {
         return data['status'] == 'success';
       }
     } catch (e) {
-      // Ignore / handle error
+      debugPrint('Error deleteRiwayat: $e');
     }
     return false;
+  }
+
+  // --- MANAJEMEN GEJALA (ADMIN CRUD) ---
+
+  static Future<List<Gejala>> getGejalaList() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/get_gejala.php'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data
+            .map((item) => Gejala(
+                  item['kode'].toString(),
+                  item['nama'].toString(),
+                ))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error getGejalaList: $e');
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> addGejala(String kode, String nama) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/manage_gejala.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'tambah',
+          'kode_gejala': kode,
+          'nama_gejala': nama,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Error addGejala: $e');
+    }
+    return {'status': 'error', 'message': 'Gagal terhubung ke server'};
+  }
+
+  static Future<Map<String, dynamic>> updateGejala(String kode, String nama) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/manage_gejala.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'edit',
+          'kode_gejala': kode,
+          'nama_gejala': nama,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Error updateGejala: $e');
+    }
+    return {'status': 'error', 'message': 'Gagal terhubung ke server'};
+  }
+
+  static Future<Map<String, dynamic>> deleteGejala(String kode) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/manage_gejala.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'hapus',
+          'kode_gejala': kode,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Error deleteGejala: $e');
+    }
+    return {'status': 'error', 'message': 'Gagal terhubung ke server'};
+  }
+
+  // --- MANAJEMEN KERUSAKAN (ADMIN CRUD) ---
+
+  static Future<List<Kerusakan>> getKerusakanList() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/get_kerusakan.php'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data
+            .map((item) => Kerusakan(
+                  item['kode'].toString(),
+                  item['nama'].toString(),
+                  item['deskripsi'].toString(),
+                  item['solusi'].toString(),
+                  item['hardware'].toString(),
+                  item['imagePath'].toString(),
+                ))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error getKerusakanList: $e');
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> addKerusakan({
+    required String kode,
+    required String nama,
+    required String deskripsi,
+    required String solusi,
+    required String hardware,
+    String? imagePath,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/manage_kerusakan.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'tambah',
+          'kode_kerusakan': kode,
+          'nama_kerusakan': nama,
+          'deskripsi': deskripsi,
+          'solusi': solusi,
+          'hardware': hardware,
+          'image_path': imagePath ?? 'assets/images/motherboard.jpg',
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Error addKerusakan: $e');
+    }
+    return {'status': 'error', 'message': 'Gagal terhubung ke server'};
+  }
+
+  static Future<Map<String, dynamic>> updateKerusakan({
+    required String kode,
+    required String nama,
+    required String deskripsi,
+    required String solusi,
+    required String hardware,
+    String? imagePath,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/manage_kerusakan.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'edit',
+          'kode_kerusakan': kode,
+          'nama_kerusakan': nama,
+          'deskripsi': deskripsi,
+          'solusi': solusi,
+          'hardware': hardware,
+          'image_path': imagePath ?? 'assets/images/motherboard.jpg',
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Error updateKerusakan: $e');
+    }
+    return {'status': 'error', 'message': 'Gagal terhubung ke server'};
+  }
+
+  static Future<Map<String, dynamic>> deleteKerusakan(String kode) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/manage_kerusakan.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'hapus',
+          'kode_kerusakan': kode,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Error deleteKerusakan: $e');
+    }
+    return {'status': 'error', 'message': 'Gagal terhubung ke server'};
   }
 }
