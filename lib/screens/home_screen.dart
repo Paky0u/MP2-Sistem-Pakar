@@ -139,9 +139,26 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             if (_user != null)
-                              CodeChip(
-                                code: _user!.role.toUpperCase(),
-                                label: 'Role',
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: (_user!.isAdmin ? AppColors.warning : AppColors.primary)
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                                  border: Border.all(
+                                    color: (_user!.isAdmin ? AppColors.warning : AppColors.primary)
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  _user!.role.toUpperCase(),
+                                  style: TextStyle(
+                                    color: _user!.isAdmin ? AppColors.warning : AppColors.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: AppFonts.mono,
+                                  ),
+                                ),
                               ),
                             const SizedBox(width: AppSpacing.xs),
                             IconButton(
@@ -175,18 +192,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.admin_panel_settings, color: AppColors.warning, size: 18),
                                   SizedBox(width: AppSpacing.sm),
-                                  Text(
-                                    'Anda sedang dalam Mode User • Klik untuk Buka Panel Admin',
-                                    style: TextStyle(
-                                      color: AppColors.warning,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Text(
+                                      'Mode Pengguna • Ketuk untuk kembali ke Panel Admin',
+                                      style: TextStyle(
+                                        color: AppColors.warning,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
+                                  Icon(Icons.arrow_forward_ios, color: AppColors.warning, size: 12),
                                 ],
                               ),
                             ),
