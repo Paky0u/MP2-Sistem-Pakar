@@ -1,6 +1,17 @@
 CREATE DATABASE IF NOT EXISTS `db_diagnos_pc`;
 USE `db_diagnos_pc`;
 
+-- 0. Table User
+CREATE TABLE IF NOT EXISTS `tb_user` (
+  `id_user` INT AUTO_INCREMENT PRIMARY KEY,
+  `nama` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(100) UNIQUE NOT NULL,
+  `password` VARCHAR(255) NULL,
+  `google_id` VARCHAR(100) NULL,
+  `role` ENUM('admin', 'user') DEFAULT 'user',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 1. Table Gejala
 CREATE TABLE IF NOT EXISTS `tb_gejala` (
   `kode_gejala` VARCHAR(10) PRIMARY KEY,
@@ -29,14 +40,20 @@ CREATE TABLE IF NOT EXISTS `tb_aturan` (
 -- 4. Table Riwayat
 CREATE TABLE IF NOT EXISTS `tb_riwayat` (
   `id_riwayat` INT AUTO_INCREMENT PRIMARY KEY,
+  `id_user` INT NULL,
   `tanggal` VARCHAR(50) NOT NULL,
   `gejala_dipilih` TEXT NOT NULL,
   `kode_kerusakan` VARCHAR(10) NOT NULL,
   `nama_kerusakan` VARCHAR(255) NOT NULL,
-  `persentase` INT NOT NULL
+  `persentase` INT NOT NULL,
+  FOREIGN KEY (`id_user`) REFERENCES `tb_user`(`id_user`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- SEED DATA --
+
+-- Seed Default Admin User
+INSERT IGNORE INTO `tb_user` (`id_user`, `nama`, `email`, `password`, `role`) VALUES
+(1, 'Administrator Pakar', 'admin@gmail.com', MD5('admin123'), 'admin');
 
 -- Seed Gejala
 INSERT IGNORE INTO `tb_gejala` (`kode_gejala`, `nama_gejala`) VALUES

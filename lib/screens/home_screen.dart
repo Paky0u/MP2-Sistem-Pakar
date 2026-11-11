@@ -1,18 +1,80 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../models/user_model.dart';
 import '../widgets/app_background.dart';
 import '../widgets/radar_scan.dart';
 import '../widgets/menu_card.dart';
 import '../widgets/staggered_entrance.dart';
 import '../widgets/code_chip.dart';
 import '../utils/app_route.dart';
+import '../services/app_preferences.dart';
+import '../services/auth_service.dart';
 import 'diagnosis_screen.dart';
 import 'kamus_screen.dart';
 import 'riwayat_screen.dart';
 import 'tentang_screen.dart';
+import 'login_screen.dart';
+import 'admin/admin_dashboard_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  UserModel? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AppPreferences.getUser();
+    if (mounted) {
+      setState(() => _user = user);
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Konfirmasi Logout', style: TextStyle(color: AppColors.textPrimary)),
+        content: const Text(
+          'Apakah Anda yakin ingin keluar dari akun?',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Batal', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await AuthService.logout();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        fadeSlideRoute(const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +93,7 @@ class HomeScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         const SizedBox(height: AppSpacing.sm),
+                        // Top Header Bar
                         Row(
                           children: [
                             Container(
@@ -50,31 +113,86 @@ class HomeScreen extends StatelessWidget {
                                   color: AppColors.primary, size: 20),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'PC DOCTOR',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    letterSpacing: 1.2,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _user != null ? 'Halo, ${_user!.nama}' : 'PC DOCTOR',
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      letterSpacing: 0.5,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                Text(
-                                  'Diagnostic Console',
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: 11,
+                                  Text(
+                                    _user != null ? _user!.email : 'Diagnostic Console',
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 11,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            const Spacer(),
-                            const CodeChip(code: 'ONLINE', label: 'Sistem'),
+                            if (_user != null)
+                              CodeChip(
+                                code: _user!.role.toUpperCase(),
+                                label: 'Role',
+                              ),
+                            const SizedBox(width: AppSpacing.xs),
+                            IconButton(
+                              icon: const Icon(Icons.logout, color: AppColors.textMuted, size: 20),
+                              tooltip: 'Logout',
+                              onPressed: _handleLogout,
+                            ),
                           ],
                         ),
+
+                        // Jika login sebagai Admin, tampilkan banner shortcut ke Panel Admin
+                        if (_user != null && _user!.isAdmin) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          InkWell(
+                            onTap: () {
+                              Navigator.of(context).pushReplacement(
+                                fadeSlideRoute(const AdminDashboardScreen()),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.sm,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(
+                                  color: AppColors.warning.withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.admin_panel_settings, color: AppColors.warning, size: 18),
+                                  SizedBox(width: AppSpacing.sm),
+                                  Text(
+                                    'Anda sedang dalam Mode User • Klik untuk Buka Panel Admin',
+                                    style: TextStyle(
+                                      color: AppColors.warning,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: AppSpacing.lg),
                         StaggeredEntrance(
                           index: 0,

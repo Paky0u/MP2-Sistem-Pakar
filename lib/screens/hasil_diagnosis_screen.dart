@@ -7,6 +7,7 @@ import '../widgets/code_chip.dart';
 import '../models/kerusakan.dart';
 import '../models/riwayat.dart';
 import '../services/api_service.dart';
+import '../services/app_preferences.dart';
 
 class HasilDiagnosisScreen extends StatefulWidget {
   /// Hasil dari `diagnosa()` pada inference_engine:
@@ -45,7 +46,16 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
         ? widget.gejalaTerpilih
         : (item['gejalaMatch'] as List).cast<String>();
 
+    int? userId;
+    if (widget.simpanRiwayat == null) {
+      try {
+        final user = await AppPreferences.getUser();
+        userId = user?.id;
+      } catch (_) {}
+    }
+
     final riwayat = Riwayat(
+      idUser: userId,
       tanggal: _formatTanggal(DateTime.now()),
       gejalaDipilih: gejala.join(', '),
       kodeKerusakan: kerusakan.kode,

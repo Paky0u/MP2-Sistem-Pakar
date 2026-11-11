@@ -4,7 +4,9 @@ import '../widgets/app_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/skeleton.dart';
 import '../services/api_service.dart';
+import '../services/app_preferences.dart';
 import '../models/riwayat.dart';
+import '../models/user_model.dart';
 
 class RiwayatScreen extends StatefulWidget {
   const RiwayatScreen({super.key});
@@ -15,17 +17,29 @@ class RiwayatScreen extends StatefulWidget {
 
 class _RiwayatScreenState extends State<RiwayatScreen> {
   late Future<List<Riwayat>> _riwayatList;
+  UserModel? _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _riwayatList = ApiService.getRiwayatList();
     _refreshRiwayat();
   }
 
-  void _refreshRiwayat() {
-    setState(() {
-      _riwayatList = ApiService.getRiwayatList();
-    });
+  void _refreshRiwayat() async {
+    try {
+      final user = await AppPreferences.getUser();
+      if (!mounted) return;
+      setState(() {
+        _currentUser = user;
+        _riwayatList = ApiService.getRiwayatList(
+          idUser: user?.id,
+          all: user?.isAdmin ?? false,
+        );
+      });
+    } catch (_) {
+      // In case SharedPreferences is unmocked in tests
+    }
   }
 
   void _deleteItem(int id) async {
@@ -96,14 +110,29 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                       icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
-                    const Expanded(
-                      child: Text(
-                        'Riwayat Diagnosis',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Riwayat Diagnosis',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (_currentUser != null)
+                            Text(
+                              _currentUser!.isAdmin
+                                  ? 'Mode Admin: Menampilkan Semua Riwayat'
+                                  : 'Riwayat Konsultasi Akun Anda',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     IconButton(
@@ -139,6 +168,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: _RiwayatCard(
                             item: item,
+                            showUserBadge: _currentUser?.isAdmin ?? false,
                             onDelete: () => _deleteItem(item.id!),
                           ),
                         );
@@ -157,9 +187,14 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
 
 class _RiwayatCard extends StatelessWidget {
   final Riwayat item;
+  final bool showUserBadge;
   final VoidCallback onDelete;
 
-  const _RiwayatCard({required this.item, required this.onDelete});
+  const _RiwayatCard({
+    required this.item,
+    this.showUserBadge = false,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +230,32 @@ class _RiwayatCard extends StatelessWidget {
               ),
             ],
           ),
+          if (showUserBadge && item.namaUser != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: AppColors.surfaceBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person, size: 12, color: AppColors.secondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'User: ${item.namaUser}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           Text(
             item.namaKerusakan,
@@ -243,15 +304,24 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.history_rounded, size: 64, color: AppColors.textMuted),
-          SizedBox(height: AppSpacing.md),
-          Text(
-            'Belum ada riwayat diagnosis',
-            style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
+          Icon(Icons.history_toggle_off,
+              size: 64, color: AppColors.textMuted.withValues(alpha: 0.5)),
+          const SizedBox(height: AppSpacing.md),
+          const Text(
+            'Belum ada riwayat',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
+            'Hasil diagnosis yang Anda simpan akan muncul di sini',
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
         ],
       ),
@@ -265,8 +335,7 @@ class _RiwayatSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, 0, AppSpacing.md, AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       itemCount: 4,
       itemBuilder: (context, index) {
         return const Padding(
@@ -275,11 +344,19 @@ class _RiwayatSkeleton extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SkeletonLoader(width: 120, height: 12),
-                SizedBox(height: AppSpacing.md),
-                SkeletonLoader(width: 200, height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SkeletonLoader(width: 100, height: 12),
+                    SkeletonLoader(width: 70, height: 18, radius: AppRadius.pill),
+                  ],
+                ),
                 SizedBox(height: AppSpacing.sm),
+                SkeletonLoader(width: 180, height: 16),
+                SizedBox(height: AppSpacing.xs),
                 SkeletonLoader(width: double.infinity, height: 12),
+                SizedBox(height: AppSpacing.xs),
+                SkeletonLoader(width: 220, height: 12),
               ],
             ),
           ),

@@ -4,7 +4,7 @@ import '../services/app_preferences.dart';
 import '../widgets/app_background.dart';
 import '../widgets/gradient_button.dart';
 import '../utils/app_route.dart';
-import 'home_screen.dart';
+import 'login_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -41,7 +41,7 @@ class OnboardingScreen extends StatelessWidget {
                     await AppPreferences.setOnboardingDone();
                     if (!context.mounted) return;
                     Navigator.of(context)
-                        .pushReplacement(fadeSlideRoute(const HomeScreen()));
+                        .pushReplacement(fadeSlideRoute(const LoginScreen()));
                   },
                 ),
                 const SizedBox(height: AppSpacing.xl),
