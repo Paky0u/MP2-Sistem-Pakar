@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `tb_riwayat` (
   `kode_kerusakan` VARCHAR(10) NOT NULL,
   `nama_kerusakan` VARCHAR(255) NOT NULL,
   `persentase` INT NOT NULL,
+  `hasil_json` LONGTEXT NULL,
   FOREIGN KEY (`id_user`) REFERENCES `tb_user`(`id_user`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

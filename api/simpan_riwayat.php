@@ -10,13 +10,14 @@ if (isset($data['tanggal'], $data['gejala_dipilih'], $data['kode_kerusakan'], $d
     $kode = trim($data['kode_kerusakan']);
     $nama = trim($data['nama_kerusakan']);
     $persen = (int)$data['persentase'];
+    $hasilJson = isset($data['hasil_json']) ? $data['hasil_json'] : null;
 
     if ($idUser !== null) {
-        $stmt = $conn->prepare("INSERT INTO tb_riwayat (id_user, tanggal, gejala_dipilih, kode_kerusakan, nama_kerusakan, persentase) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("issssi", $idUser, $tanggal, $gejala, $kode, $nama, $persen);
+        $stmt = $conn->prepare("INSERT INTO tb_riwayat (id_user, tanggal, gejala_dipilih, kode_kerusakan, nama_kerusakan, persentase, hasil_json) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("issssis", $idUser, $tanggal, $gejala, $kode, $nama, $persen, $hasilJson);
     } else {
-        $stmt = $conn->prepare("INSERT INTO tb_riwayat (tanggal, gejala_dipilih, kode_kerusakan, nama_kerusakan, persentase) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssi", $tanggal, $gejala, $kode, $nama, $persen);
+        $stmt = $conn->prepare("INSERT INTO tb_riwayat (tanggal, gejala_dipilih, kode_kerusakan, nama_kerusakan, persentase, hasil_json) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssssis", $tanggal, $gejala, $kode, $nama, $persen, $hasilJson);
     }
 
     if ($stmt->execute()) {

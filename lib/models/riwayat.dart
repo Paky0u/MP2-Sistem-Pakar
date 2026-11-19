@@ -8,6 +8,7 @@ class Riwayat {
   final String kodeKerusakan;
   final String namaKerusakan;
   final int persentase;
+  final String? hasilJson;
 
   Riwayat({
     this.id,
@@ -19,6 +20,7 @@ class Riwayat {
     required this.kodeKerusakan,
     required this.namaKerusakan,
     required this.persentase,
+    this.hasilJson,
   });
 
   Map<String, dynamic> toMap() {
@@ -30,6 +32,7 @@ class Riwayat {
       'kode_kerusakan': kodeKerusakan,
       'nama_kerusakan': namaKerusakan,
       'persentase': persentase,
+      'hasil_json': hasilJson,
     };
   }
 
@@ -50,6 +53,7 @@ class Riwayat {
       persentase: map['persentase'] is int
           ? map['persentase']
           : int.tryParse(map['persentase']?.toString() ?? '0') ?? 0,
+      hasilJson: map['hasil_json']?.toString(),
     );
   }
 }

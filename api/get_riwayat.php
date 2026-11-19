@@ -35,7 +35,8 @@ if ($result && $result->num_rows > 0) {
             'gejala_dipilih' => $row['gejala_dipilih'],
             'kode_kerusakan' => $row['kode_kerusakan'],
             'nama_kerusakan' => $row['nama_kerusakan'],
-            'persentase' => (int)$row['persentase']
+            'persentase' => (int)$row['persentase'],
+            'hasil_json' => isset($row['hasil_json']) ? $row['hasil_json'] : null
         );
     }
 }

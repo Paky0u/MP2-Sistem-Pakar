@@ -108,8 +108,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       .withValues(alpha: 0.3),
                                 ),
                               ),
-                              child: const Icon(Icons.medical_services,
-                                  color: AppColors.primary, size: 20),
+                              padding: const EdgeInsets.all(4),
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
+                                child: Image.asset(
+                                  'assets/images/logo_icon.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.medical_services,
+                                          color: AppColors.primary, size: 20),
+                                ),
+                              ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(

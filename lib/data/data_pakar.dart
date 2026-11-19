@@ -2,7 +2,7 @@ import '../models/gejala.dart';
 import '../models/kerusakan.dart';
 import '../models/aturan.dart';
 
-final List<Gejala> semuaGejala = const [
+const List<Gejala> semuaGejala = [
   Gejala('B01', 'Layar blank saat komputer dinyalakan', 'Layar & Grafis'),
   Gejala('B02', 'Munculnya garis horizontal atau vertikal di layar',
       'Layar & Grafis'),

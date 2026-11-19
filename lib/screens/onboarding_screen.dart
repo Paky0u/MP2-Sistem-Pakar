@@ -20,7 +20,34 @@ class OnboardingScreen extends StatelessWidget {
             child: Column(
               children: [
                 const Spacer(),
-                const Icon(Icons.medical_services, size: 80, color: AppColors.primary),
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo_icon.png',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.medical_services,
+                        size: 64,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 const Text(
                   'PC DOCTOR',

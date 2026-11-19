@@ -133,10 +133,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 1.5,
                             ),
                           ),
-                          child: const Icon(
-                            Icons.memory,
-                            color: AppColors.primary,
-                            size: 34,
+                          padding: const EdgeInsets.all(8),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/logo_icon.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                Icons.memory,
+                                color: AppColors.primary,
+                                size: 34,
+                              ),
+                            ),
                           ),
                         ),
                       ),

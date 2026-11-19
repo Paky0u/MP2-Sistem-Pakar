@@ -160,6 +160,7 @@ class ApiService {
           'kode_kerusakan': riwayat.kodeKerusakan,
           'nama_kerusakan': riwayat.namaKerusakan,
           'persentase': riwayat.persentase,
+          'hasil_json': riwayat.hasilJson,
         }),
       );
       if (response.statusCode == 200) {

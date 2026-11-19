@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_background.dart';
 import '../widgets/kerusakan_card.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/code_chip.dart';
+import '../services/pdf_report_service.dart';
 import '../models/kerusakan.dart';
 import '../models/riwayat.dart';
 import '../services/api_service.dart';
@@ -16,7 +18,7 @@ class HasilDiagnosisScreen extends StatefulWidget {
   final List<Map<String, dynamic>> hasil;
   final List<String> gejalaTerpilih;
 
-  /// Dapat di-inject pada pengujian; default memakai ApiService.
+  /// Dapat di‑inject pada pengujian; default memakai ApiService.
   final Future<bool> Function(Riwayat)? simpanRiwayat;
 
   const HasilDiagnosisScreen({
@@ -39,7 +41,6 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
 
   Future<void> _simpanKeRiwayat() async {
     if (widget.hasil.isEmpty) return;
-
     final item = widget.hasil.first;
     final kerusakan = item['kerusakan'] as Kerusakan;
     final gejala = widget.gejalaTerpilih.isNotEmpty
@@ -54,6 +55,20 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
       } catch (_) {}
     }
 
+    // Serialize seluruh daftar hasil kerusakan yang terdeteksi
+    final hasilList = widget.hasil.map((h) {
+      final k = h['kerusakan'] as Kerusakan;
+      return {
+        'kode': k.kode,
+        'nama': k.nama,
+        'hardware': k.hardware,
+        'deskripsi': k.deskripsi,
+        'solusi': k.solusi,
+        'persen': h['persen'] as int,
+      };
+    }).toList();
+    final hasilJson = jsonEncode(hasilList);
+
     final riwayat = Riwayat(
       idUser: userId,
       tanggal: _formatTanggal(DateTime.now()),
@@ -61,6 +76,7 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
       kodeKerusakan: kerusakan.kode,
       namaKerusakan: kerusakan.nama,
       persentase: item['persen'] as int,
+      hasilJson: hasilJson,
     );
 
     final saver = widget.simpanRiwayat ?? ApiService.simpanRiwayat;
@@ -71,6 +87,48 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${d.year}-${two(d.month)}-${two(d.day)} '
         '${two(d.hour)}:${two(d.minute)}:${two(d.second)}';
+  }
+
+  Future<void> _exportPdf() async {
+    if (widget.hasil.isEmpty) return;
+    final item = widget.hasil.first;
+    final kerusakan = item['kerusakan'] as Kerusakan;
+    final gejala = widget.gejalaTerpilih.isNotEmpty
+        ? widget.gejalaTerpilih
+        : (item['gejalaMatch'] as List).cast<String>();
+
+    final user = await AppPreferences.getUser();
+    final nama = user?.nama ?? 'Tamu';
+    final email = user?.email ?? '-';
+
+    // Kumpulkan seluruh kemungkinan kerusakan peringkat 2 ke atas
+    final daftarLain = widget.hasil.length > 1
+        ? widget.hasil.skip(1).map((h) {
+            final k = h['kerusakan'] as Kerusakan;
+            return {
+              'kode': k.kode,
+              'nama': k.nama,
+              'hardware': k.hardware,
+              'deskripsi': k.deskripsi,
+              'solusi': k.solusi,
+              'persen': h['persen'] as int,
+            };
+          }).toList()
+        : <Map<String, dynamic>>[];
+
+    await PdfReportService.printDiagnosisReport(
+      namaUser: nama,
+      emailUser: email,
+      tanggal: _formatTanggal(DateTime.now()),
+      namaKerusakan: kerusakan.nama,
+      kodeKerusakan: kerusakan.kode,
+      hardware: kerusakan.hardware,
+      persentase: item['persen'] as int,
+      deskripsi: kerusakan.deskripsi,
+      solusi: kerusakan.solusi,
+      gejalaList: gejala,
+      daftarKerusakanLain: daftarLain,
+    );
   }
 
   @override
@@ -103,6 +161,12 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
                         ),
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.picture_as_pdf,
+                          color: AppColors.primary),
+                      tooltip: 'Export PDF',
+                      onPressed: _exportPdf,
+                    ),
                   ],
                 ),
               ),
@@ -115,18 +179,15 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
                         itemCount: hasil.length,
                         itemBuilder: (context, index) {
                           final item = hasil[index];
-                          final kerusakan =
-                              item['kerusakan'] as Kerusakan;
+                          final kerusakan = item['kerusakan'] as Kerusakan;
                           final persen = (item['persen'] as int) / 100.0;
                           return Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: KerusakanCard(
                               nama: kerusakan.nama,
                               persentase: persen,
                               rank: index + 1,
-                              onTap: () =>
-                                  _showDetail(context, item, index + 1),
+                              onTap: () => _showDetail(context, item, index + 1),
                             ),
                           );
                         },
@@ -139,8 +200,7 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
     );
   }
 
-  void _showDetail(
-      BuildContext context, Map<String, dynamic> item, int rank) {
+  void _showDetail(BuildContext context, Map<String, dynamic> item, int rank) {
     final kerusakan = item['kerusakan'] as Kerusakan;
     final gejalaMatch = (item['gejalaMatch'] as List).cast<String>();
 
@@ -158,10 +218,8 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
             return Container(
               decoration: const BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(AppRadius.lg)),
-                border: Border(
-                    top: BorderSide(color: AppColors.surfaceBorder)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+                border: Border(top: BorderSide(color: AppColors.surfaceBorder)),
               ),
               child: ListView(
                 controller: controller,
@@ -218,31 +276,27 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
                     title: 'Gejala Cocok',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: gejalaMatch
-                          .map((g) => Padding(
-                                padding: const EdgeInsets.only(
-                                    bottom: AppSpacing.xs),
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(Icons.check_circle,
-                                        color: AppColors.success, size: 16),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Expanded(
-                                      child: Text(
-                                        g,
-                                        style: const TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 13,
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                      children: gejalaMatch.map((g) => Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.check_circle,
+                                color: AppColors.success, size: 16),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                g,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                  height: 1.4,
                                 ),
-                              ))
-                          .toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )).toList(),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -255,6 +309,56 @@ class _HasilDiagnosisScreenState extends State<HasilDiagnosisScreen> {
                         fontSize: 13,
                         height: 1.5,
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.picture_as_pdf, size: 18),
+                      label: const Text('Cetak / Ekspor PDF'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                      onPressed: () async {
+                        final user = await AppPreferences.getUser();
+                        final daftarLain = widget.hasil
+                            .where((h) =>
+                                (h['kerusakan'] as Kerusakan).kode !=
+                                kerusakan.kode)
+                            .map((h) {
+                          final k = h['kerusakan'] as Kerusakan;
+                          return {
+                            'kode': k.kode,
+                            'nama': k.nama,
+                            'hardware': k.hardware,
+                            'deskripsi': k.deskripsi,
+                            'solusi': k.solusi,
+                            'persen': h['persen'] as int,
+                          };
+                        }).toList();
+
+                        await PdfReportService.printDiagnosisReport(
+                          namaUser: user?.nama ?? 'Tamu',
+                          emailUser: user?.email ?? '-',
+                          tanggal: _formatTanggal(DateTime.now()),
+                          namaKerusakan: kerusakan.nama,
+                          kodeKerusakan: kerusakan.kode,
+                          hardware: kerusakan.hardware,
+                          persentase: item['persen'] as int,
+                          deskripsi: kerusakan.deskripsi,
+                          solusi: kerusakan.solusi,
+                          gejalaList: widget.gejalaTerpilih.isNotEmpty
+                              ? widget.gejalaTerpilih
+                              : gejalaMatch,
+                          daftarKerusakanLain: daftarLain,
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -304,8 +408,7 @@ class _EmptyResult extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle_outline,
-              size: 64, color: AppColors.textMuted),
+          Icon(Icons.check_circle_outline, size: 64, color: AppColors.textMuted),
           SizedBox(height: AppSpacing.md),
           Text(
             'Tidak ada kerusakan terdeteksi',

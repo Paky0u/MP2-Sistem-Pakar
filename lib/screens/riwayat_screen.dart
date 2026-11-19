@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_background.dart';
@@ -5,8 +6,10 @@ import '../widgets/glass_card.dart';
 import '../widgets/skeleton.dart';
 import '../services/api_service.dart';
 import '../services/app_preferences.dart';
+import '../services/pdf_report_service.dart';
 import '../models/riwayat.dart';
 import '../models/user_model.dart';
+import '../data/data_pakar.dart';
 
 class RiwayatScreen extends StatefulWidget {
   const RiwayatScreen({super.key});
@@ -198,6 +201,76 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                             item: item,
                             showUserBadge: _currentUser?.isAdmin ?? false,
                             onDelete: () => _confirmDeleteItem(item.id!),
+                            onExportPdf: () async {
+                              final user = await AppPreferences.getUser();
+
+                              // Prioritaskan data pemilik riwayat (user yang didiagnosa)
+                              // agar saat Admin mencetak riwayat user lain, nama yang tertera adalah nama user tersebut.
+                              String nama = (item.namaUser != null &&
+                                      item.namaUser!.trim().isNotEmpty &&
+                                      item.namaUser != 'Tamu')
+                                  ? item.namaUser!
+                                  : '';
+
+                              String email = (item.emailUser != null &&
+                                      item.emailUser!.trim().isNotEmpty &&
+                                      item.emailUser != '-')
+                                  ? item.emailUser!
+                                  : '';
+
+                              // Jika riwayat tidak memiliki nama pemilik (misal tamu atau data lama)
+                              if (nama.isEmpty) {
+                                if (user != null &&
+                                    (item.idUser == user.id ||
+                                        item.idUser == null &&
+                                            !user.isAdmin)) {
+                                  nama = user.nama;
+                                  if (email.isEmpty) email = user.email;
+                                } else {
+                                  nama = item.namaUser ?? 'Tamu';
+                                  if (email.isEmpty) email = item.emailUser ?? '-';
+                                }
+                              }
+                              
+                              // Cari info kerusakan dari data pakar
+                              final kerusakan = semuaKerusakan.firstWhere(
+                                (k) => k.kode == item.kodeKerusakan,
+                                orElse: () => semuaKerusakan[0],
+                              );
+
+                              // Parse daftar kemungkinan kerusakan lain jika tersimpan di hasil_json
+                              List<Map<String, dynamic>> daftarLain = [];
+                              if (item.hasilJson != null &&
+                                  item.hasilJson!.trim().isNotEmpty) {
+                                try {
+                                  final decoded =
+                                      jsonDecode(item.hasilJson!) as List;
+                                  final listMap =
+                                      decoded.cast<Map<String, dynamic>>();
+                                  if (listMap.length > 1) {
+                                    daftarLain = listMap.skip(1).toList();
+                                  }
+                                } catch (_) {}
+                              }
+
+                              await PdfReportService.printDiagnosisReport(
+                                namaUser: nama,
+                                emailUser: email,
+                                tanggal: item.tanggal,
+                                namaKerusakan: item.namaKerusakan,
+                                kodeKerusakan: item.kodeKerusakan,
+                                hardware: kerusakan.hardware,
+                                persentase: item.persentase,
+                                deskripsi: kerusakan.deskripsi,
+                                solusi: kerusakan.solusi,
+                                gejalaList: item.gejalaDipilih
+                                    .split(',')
+                                    .map((s) => s.trim())
+                                    .where((s) => s.isNotEmpty)
+                                    .toList(),
+                                daftarKerusakanLain: daftarLain,
+                              );
+                            },
                           ),
                         );
                       },
@@ -217,11 +290,13 @@ class _RiwayatCard extends StatelessWidget {
   final Riwayat item;
   final bool showUserBadge;
   final VoidCallback onDelete;
+  final VoidCallback onExportPdf;
 
   const _RiwayatCard({
     required this.item,
     this.showUserBadge = false,
     required this.onDelete,
+    required this.onExportPdf,
   });
 
   @override
@@ -293,6 +368,33 @@ class _RiwayatCard extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
+          if (item.hasilJson != null && item.hasilJson!.trim().isNotEmpty) ...[
+            Builder(
+              builder: (context) {
+                try {
+                  final decoded = jsonDecode(item.hasilJson!) as List;
+                  if (decoded.length > 1) {
+                    final altText = decoded
+                        .skip(1)
+                        .map((x) => '${x['nama']} (${x['persen']}%)')
+                        .join(', ');
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Diagnosa Banding: $altText',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.primary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    );
+                  }
+                } catch (_) {}
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Gejala: ${item.gejalaDipilih}',
@@ -300,26 +402,46 @@ class _RiwayatCard extends StatelessWidget {
                 fontSize: 12, color: AppColors.textSecondary, height: 1.4),
           ),
           const Divider(height: AppSpacing.lg),
-          Align(
-            alignment: Alignment.centerRight,
-            child: InkWell(
-              onTap: onDelete,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.delete_outline,
-                        size: 16, color: AppColors.danger),
-                    SizedBox(width: 4),
-                    Text('Hapus',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.danger)),
-                  ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              InkWell(
+                onTap: onExportPdf,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.picture_as_pdf,
+                          size: 16, color: AppColors.primary),
+                      SizedBox(width: 4),
+                      Text('Cetak PDF',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.primary)),
+                    ],
+                  ),
                 ),
               ),
-            ),
+              InkWell(
+                onTap: onDelete,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.delete_outline,
+                          size: 16, color: AppColors.danger),
+                      SizedBox(width: 4),
+                      Text('Hapus',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.danger)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
